@@ -5,7 +5,7 @@ import os
 import numpy as np
 import sys
 sys.path.append("../.")
-from Utils import get_center_of_bbox,get_bbox_width
+from Utils import get_center_of_bbox,get_bbox_width,get_foot_position
 import cv2
 import pandas as pd
 import gc
@@ -14,6 +14,18 @@ class Tracker:
   def __init__(self,model_path):
     self.model = YOLO(model_path)
     self.tracker=sv.ByteTrack()
+
+  def add_position_to_tracks(self,tracks):
+    for object, object_tracks in tracks.items():
+      for frame_num, track in enumerate(object_tracks):
+        for track_id, track_info in track.items():
+          bbox = track_info['bbox']
+          if object == 'ball':
+            position= get_center_of_bbox(bbox)
+          else:
+            position = get_foot_position(bbox)
+          tracks[object][frame_num][track_id]['position'] = position
+
 
 
   def interpolate_ball_position(self,ball_positions):
@@ -36,6 +48,38 @@ class Tracker:
       detections+=detections_batch
     return detections
 
+
+  def draw_team_control(self,frame,frame_num,team_ball_control):
+    overlay = frame.copy()
+    cv2.rectangle(overlay,(1350,850),(1900,970),(255,255,255),cv2.FILLED)
+    alpha = 0.5
+    cv2.addWeighted(overlay,alpha,frame,1-alpha,0,frame)
+
+    team_ball_control_till_frame = team_ball_control[:frame_num+1]
+    team_1_num_frames = team_ball_control_till_frame[team_ball_control_till_frame==1].shape[0]
+    team_2_num_frames = team_ball_control_till_frame[team_ball_control_till_frame==2].shape[0]
+    team_1 = (team_1_num_frames/(team_1_num_frames+team_2_num_frames))*100
+    team_2 = (team_2_num_frames/(team_1_num_frames+team_2_num_frames))*100
+
+    cv2.putText(frame,
+      f'Team 1 Ball control: {team_1:.2f}%',
+      (1400,900),
+      cv2.FONT_HERSHEY_SIMPLEX,
+      1,
+      (0,0,0),
+      3
+    )
+    cv2.putText(frame,
+      f'Team 2 Ball control: {team_2:.2f}%',
+      (1400,950),
+      cv2.FONT_HERSHEY_SIMPLEX,
+      1,
+      (0,0,0),
+      3
+    )
+
+    return frame
+    
 
   def get_object_track(self, frames,read_from_stub=False,stub_path=None):
     if read_from_stub and stub_path is not None and os.path.exists(stub_path):
@@ -71,22 +115,22 @@ class Tracker:
         tracks["ball"].append({})
 
         for frame_detection in detection_with_tracks:
-            bbox = frame_detection[0].tolist()
-            cls_id = frame_detection[3]
-            track_id = frame_detection[4]
+          bbox = frame_detection[0].tolist()
+          cls_id = frame_detection[3]
+          track_id = frame_detection[4]
 
-            if cls_id == cls_names_inv['player']:
-                tracks["players"][frame_num][track_id] = {"bbox":bbox}
-            
-            if cls_id == cls_names_inv['referee']:
-                tracks["referees"][frame_num][track_id] = {"bbox":bbox}
+          if cls_id == cls_names_inv['player']:
+              tracks["players"][frame_num][track_id] = {"bbox":bbox}
+          
+          if cls_id == cls_names_inv['referee']:
+              tracks["referees"][frame_num][track_id] = {"bbox":bbox}
         
         for frame_detection in detection_supervision:
-            bbox = frame_detection[0].tolist()
-            cls_id = frame_detection[3]
+          bbox = frame_detection[0].tolist()
+          cls_id = frame_detection[3]
 
-            if cls_id == cls_names_inv['ball']:
-                tracks["ball"][frame_num][1] = {"bbox":bbox}
+          if cls_id == cls_names_inv['ball']:
+              tracks["ball"][frame_num][1] = {"bbox":bbox}
 
     if stub_path is not None:
         with open(stub_path,'wb') as f:
@@ -140,7 +184,7 @@ class Tracker:
       )
     return frame
 
-  def draw_triangles(self,frame,bbox,color):
+  def draw_triangle(self,frame,bbox,color):
      y = int(bbox[1])
      x,_ = get_center_of_bbox(bbox)
 
@@ -153,7 +197,7 @@ class Tracker:
 
 
 
-  def draw_annotations(self,video_frames,tracks):
+  def draw_annotations(self,video_frames,tracks,team_ball_control):
     output_videos_frames=[]
     for frame_num,frame1 in enumerate(video_frames):
       frame=frame1.copy()
@@ -167,13 +211,18 @@ class Tracker:
         frame=self.draw_ellipse(frame,player['bbox'],color,track_id)
 
         if player.get('has_ball',False):
-           frame=self.draw_triangles(frame,player['bbox'],(0,0,255))
+           frame=self.draw_triangle(frame,player['bbox'],(0,0,255))
 
       for _,referee in referee_dict.items():
         frame=self.draw_ellipse(frame,referee['bbox'],(0,255,255))
 
       for track_id,ball in ball_dict.items():
-        frame = self.draw_triangles(frame,ball['bbox'],(0,255,0))
+        frame = self.draw_triangle(frame,ball['bbox'],(0,255,0))
+
+
+
+      frame=self.draw_team_control(frame,frame_num,team_ball_control)
+
 
       output_videos_frames.append(frame)
 

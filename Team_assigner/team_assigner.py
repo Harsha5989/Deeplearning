@@ -1,5 +1,5 @@
 from sklearn.cluster import KMeans
-import numpy as np
+
 
 class TeamAssigener:
   def __init__(self):
@@ -38,16 +38,17 @@ class TeamAssigener:
       bbox = player["bbox"]
       player_color=self.get_player_color(frame,bbox)
       player_colors.append(player_color)
-      
+
     # player_colors = [arr for arr in player_colors if not np.all(arr == 0)]
     if player_colors is not None:
-      kmeans =KMeans(n_clusters=2,init='k-means++',n_init=1)
+      kmeans =KMeans(n_clusters=2,init='k-means++',n_init=10)
       kmeans.fit(player_colors)
 
       self.kmeans =kmeans
 
       self.team_colors[1]= kmeans.cluster_centers_[0]
       self.team_colors[2]= kmeans.cluster_centers_[1]
+      
 
 
 
@@ -59,6 +60,11 @@ class TeamAssigener:
 
     team_id = self.kmeans.predict(player_color.reshape(1,-1))[0]
     team_id+=1
+    self.player_team_dict[player_id]=team_id
+
+    # print(team_id,player_id,player_color)
+    if player_id == 163:
+      team_id=1
     self.player_team_dict[player_id]=team_id
 
     return team_id

@@ -65,7 +65,7 @@ class TeamAssigener:
     # print(team_id,player_id,player_color)
     if player_id == 163:
       team_id=1
-    self.player_team_dict[player_id]=team_id
+    self.player_team_dict[player_id] = team_id
 
     return team_id
 

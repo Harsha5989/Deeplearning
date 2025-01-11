@@ -6,6 +6,8 @@ from Player_ball_assigner import PlayerBallAssigner
 import numpy as np
 from Camera_movement_estimator import CameraMovementEstimator
 from view_transformer import ViewTransformer
+from speed_and_distance_estimator import SpeedAndDistance_Estimator
+
 
 def main():
   video_frames=read_video('C://Users//dimaag//Documents//Python Class//Projects//Football analysis//input_video//08fd33_4.mp4')
@@ -38,6 +40,10 @@ def main():
   #   cv2.imwrite(f'Output_videos/cropped_image.jpg',cropped_image)
     
   #   break
+
+  speed_and_distance_estimator = SpeedAndDistance_Estimator()
+  speed_and_distance_estimator.add_speed_and_distance_to_tracks(tracks)
+
   team_assigner = TeamAssigener()
   team_assigner.assign_team_color(video_frames[0],tracks['players'][0])
 
@@ -72,6 +78,8 @@ def main():
   output_video_frames = tracker.draw_annotations(video_frames,tracks,team_ball_control)
 
   output_video_frames = camera_movement_estimator.draw_camera_movement(output_video_frames,camera_movement_per_frame)
+
+  output_video_frames =speed_and_distance_estimator.draw_speed_and_distance(output_video_frames,tracks)
 
   save_video(output_video_frames,'Output_videos/output.mp4')
 

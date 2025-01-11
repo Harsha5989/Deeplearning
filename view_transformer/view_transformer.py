@@ -8,7 +8,9 @@ class ViewTransformer:
     court_width = 68
     court_length = 23.32
 
-    self.pixel_verticies=np.array([[110,1035],[265,275],[910,260],[1640,915]])
+    #self.pixel_verticies=np.array([[110,1035],[265,275],[910,260],[1640,915]])
+    self.pixel_verticies=np.array([[106,895],[228,241],[911,220],[1665,773]])
+    #[228.8125,241.5],[106.93749999999999,895.6666666666666],[1665.9999999999998,773.8974326880284],[911.1041666666666,220.66666666666666]
     self.target_verticies=np.array([[0,court_length],[0,0],[court_width,0],[court_width,court_length]])
 
     self.pixel_verticies=self.pixel_verticies.astype(np.float32)
